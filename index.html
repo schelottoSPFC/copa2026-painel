@@ -499,34 +499,63 @@
   .mtag-classif { background: rgba(34,197,94,.18);  color: #4ade80; }
 
   /* ── GROUP FILTER BAR ── */
+  .group-filter-wrap {
+    margin: 0 -20px 20px;
+    padding: 0 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .group-filter-wrap::-webkit-scrollbar { display: none; }
   .group-filter {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto repeat(12, 1fr);
     gap: 6px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
+    min-width: max-content;
   }
   .gfbtn {
-    padding: 6px 12px;
-    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 52px;
+    border-radius: 10px;
     border: 1px solid var(--border);
     background: var(--card);
     color: var(--faint);
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 15px;
+    font-weight: 800;
     cursor: pointer;
     transition: all .15s;
     user-select: none;
+    letter-spacing: .3px;
+    padding: 0 8px;
   }
-  .gfbtn:hover { color: var(--text); border-color: #2a3f60; }
+  .gfbtn .gf-sub {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    margin-top: 2px;
+    opacity: .6;
+  }
+  .gfbtn:hover { color: var(--text); border-color: #2a3f60; background: var(--card2); }
   .gfbtn.active {
     background: var(--blue);
     border-color: var(--blue);
     color: #fff;
+    box-shadow: 0 4px 12px rgba(59,130,246,.3);
+  }
+  .gfbtn.all {
+    font-size: 11px;
+    min-width: 52px;
   }
   .gfbtn.all.active {
     background: var(--card2);
-    border-color: var(--faint);
+    border-color: var(--text);
     color: var(--text);
+    box-shadow: none;
   }
 
   /* ── EMPTY STATE ── */
@@ -600,20 +629,22 @@
 
   <!-- ── JOGOS ── -->
   <div class="pane active" id="pane-jogos">
-    <div class="group-filter" id="group-filter">
-      <button class="gfbtn all active" data-g="all">Todos</button>
-      <button class="gfbtn" data-g="A">A</button>
-      <button class="gfbtn" data-g="B">B</button>
-      <button class="gfbtn" data-g="C">C</button>
-      <button class="gfbtn" data-g="D">D</button>
-      <button class="gfbtn" data-g="E">E</button>
-      <button class="gfbtn" data-g="F">F</button>
-      <button class="gfbtn" data-g="G">G</button>
-      <button class="gfbtn" data-g="H">H</button>
-      <button class="gfbtn" data-g="I">I</button>
-      <button class="gfbtn" data-g="J">J</button>
-      <button class="gfbtn" data-g="K">K</button>
-      <button class="gfbtn" data-g="L">L</button>
+    <div class="group-filter-wrap">
+      <div class="group-filter" id="group-filter">
+        <button class="gfbtn all active" data-g="all">Todos</button>
+        <button class="gfbtn" data-g="A">A<span class="gf-sub">Grupo</span></button>
+        <button class="gfbtn" data-g="B">B<span class="gf-sub">Grupo</span></button>
+        <button class="gfbtn" data-g="C">C<span class="gf-sub">Grupo</span></button>
+        <button class="gfbtn" data-g="D">D<span class="gf-sub">Grupo</span></button>
+        <button class="gfbtn" data-g="E">E<span class="gf-sub">Grupo</span></button>
+        <button class="gfbtn" data-g="F">F<span class="gf-sub">Grupo</span></button>
+        <button class="gfbtn" data-g="G">G<span class="gf-sub">Grupo</span></button>
+        <button class="gfbtn" data-g="H">H<span class="gf-sub">Grupo</span></button>
+        <button class="gfbtn" data-g="I">I<span class="gf-sub">Grupo</span></button>
+        <button class="gfbtn" data-g="J">J<span class="gf-sub">Grupo</span></button>
+        <button class="gfbtn" data-g="K">K<span class="gf-sub">Grupo</span></button>
+        <button class="gfbtn" data-g="L">L<span class="gf-sub">Grupo</span></button>
+      </div>
     </div>
 
     <div id="live-section" style="display:none">
