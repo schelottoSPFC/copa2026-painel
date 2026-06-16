@@ -781,9 +781,23 @@ function makeMatchCard(m) {
 
   let statusHtml;
   if (isLive) {
-    const min = m.minute ? ` ${m.minute}'` : '';
-    const label = m.status === 'HT' ? 'INTERVALO' : `AO VIVO${min}`;
-    statusHtml = `<div class="match-status live">${label}</div>`;
+    let minLabel = '';
+    if (m.status === 'HT') {
+      minLabel = 'INTERVALO';
+    } else {
+      // Use API minute if available, otherwise estimate from kickoff time
+      let mins = m.minute;
+      if (!mins && m.utcDate) {
+        const elapsed = Math.floor((Date.now() - new Date(m.utcDate).getTime()) / 60000);
+        if (m.status === '2H' || m.status === 'ET') {
+          mins = Math.min(elapsed, m.status === 'ET' ? 120 : 90);
+        } else {
+          mins = Math.min(elapsed, 45);
+        }
+      }
+      minLabel = mins ? `AO VIVO · ${mins}'` : 'AO VIVO';
+    }
+    statusHtml = `<div class="match-status live">${minLabel}</div>`;
   } else if (isFT) {
     statusHtml = `<div class="match-status ft">FIM</div>`;
   } else {
