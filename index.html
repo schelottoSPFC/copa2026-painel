@@ -485,6 +485,19 @@
     transition: width .6s ease;
   }
 
+  /* ── MULT TAGS NA CLASSIFICAÇÃO ── */
+  .mult-tags { display: flex; gap: 3px; margin-left: 6px; flex-wrap: wrap; }
+  .mtag {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 5px;
+    border-radius: 4px;
+    letter-spacing: .3px;
+  }
+  .mtag-M1 { background: rgba(251,191,36,.18); color: #fbbf24; }
+  .mtag-M2 { background: rgba(59,130,246,.18); color: #60a5fa; }
+  .mtag-M3 { background: rgba(167,139,250,.18); color: #a78bfa; }
+
   /* ── EMPTY STATE ── */
   .empty {
     text-align: center;
@@ -781,23 +794,8 @@ function makeMatchCard(m) {
 
   let statusHtml;
   if (isLive) {
-    let minLabel = '';
-    if (m.status === 'HT') {
-      minLabel = 'INTERVALO';
-    } else {
-      // Use API minute if available, otherwise estimate from kickoff time
-      let mins = m.minute;
-      if (!mins && m.utcDate) {
-        const elapsed = Math.floor((Date.now() - new Date(m.utcDate).getTime()) / 60000);
-        if (m.status === '2H' || m.status === 'ET') {
-          mins = Math.min(elapsed, m.status === 'ET' ? 120 : 90);
-        } else {
-          mins = Math.min(elapsed, 45);
-        }
-      }
-      minLabel = mins ? `AO VIVO · ${mins}'` : 'AO VIVO';
-    }
-    statusHtml = `<div class="match-status live">${minLabel}</div>`;
+    const label = m.status === 'HT' ? 'INTERVALO' : 'AO VIVO';
+    statusHtml = `<div class="match-status live">${label}</div>`;
   } else if (isFT) {
     statusHtml = `<div class="match-status ft">FIM</div>`;
   } else {
@@ -913,6 +911,11 @@ function renderStandings(standings) {
             ${sorted.map((row, idx) => {
               const isQ = idx < 2;
               const rankCls = `rank-${idx+1}`;
+              const bets = BETS_MAP[row.team] || [];
+              const mults = [...new Set(bets.map(b => b.mult))];
+              const multTags = mults.length
+                ? `<span class="mult-tags">${mults.map(m => `<span class="mtag mtag-${m}">${m}</span>`).join('')}</span>`
+                : '';
               return `
                 <tr class="${isQ ? 'qualified' : ''}">
                   <td>
@@ -920,6 +923,7 @@ function renderStandings(standings) {
                       <span class="rank-badge ${rankCls}">${idx+1}</span>
                       <span class="flag">${flag(row.team)}</span>
                       <span class="tname">${row.team}</span>
+                      ${multTags}
                     </div>
                   </td>
                   <td class="pts-cell">${row.pts}</td>
