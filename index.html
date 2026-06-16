@@ -498,6 +498,37 @@
   .mtag-top2    { background: rgba(59,130,246,.18); color: #60a5fa; }
   .mtag-classif { background: rgba(34,197,94,.18);  color: #4ade80; }
 
+  /* ── GROUP FILTER BAR ── */
+  .group-filter {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .gfbtn {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--faint);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+    user-select: none;
+  }
+  .gfbtn:hover { color: var(--text); border-color: #2a3f60; }
+  .gfbtn.active {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+  .gfbtn.all.active {
+    background: var(--card2);
+    border-color: var(--faint);
+    color: var(--text);
+  }
+
   /* ── EMPTY STATE ── */
   .empty {
     text-align: center;
@@ -569,6 +600,22 @@
 
   <!-- ── JOGOS ── -->
   <div class="pane active" id="pane-jogos">
+    <div class="group-filter" id="group-filter">
+      <button class="gfbtn all active" data-g="all">Todos</button>
+      <button class="gfbtn" data-g="A">A</button>
+      <button class="gfbtn" data-g="B">B</button>
+      <button class="gfbtn" data-g="C">C</button>
+      <button class="gfbtn" data-g="D">D</button>
+      <button class="gfbtn" data-g="E">E</button>
+      <button class="gfbtn" data-g="F">F</button>
+      <button class="gfbtn" data-g="G">G</button>
+      <button class="gfbtn" data-g="H">H</button>
+      <button class="gfbtn" data-g="I">I</button>
+      <button class="gfbtn" data-g="J">J</button>
+      <button class="gfbtn" data-g="K">K</button>
+      <button class="gfbtn" data-g="L">L</button>
+    </div>
+
     <div id="live-section" style="display:none">
       <div class="section-title"><span class="live-dot"></span> Ao Vivo</div>
       <div class="match-grid" id="live-matches"></div>
@@ -632,6 +679,24 @@ const FLAG_MAP = {
   "Senegal":"🇸🇳"
 };
 function flag(name) { return FLAG_MAP[name] || '🏳️'; }
+
+// Build team → group lookup
+const TEAM_GROUP = {};
+const GROUP_DEF_EARLY = {
+  A:["México","África do Sul","Coreia do Sul","Rep. Tcheca"],
+  B:["Canadá","Catar","Suíça","Bósnia"],
+  C:["Brasil","Marrocos","Haiti","Escócia"],
+  D:["EUA","Paraguai","Austrália","Turquia"],
+  E:["Alemanha","Curaçao","Costa do Marfim","Equador"],
+  F:["Países Baixos","Japão","Tunísia","Suécia"],
+  G:["Bélgica","Egito","Irã","Nova Zelândia"],
+  H:["Espanha","Cabo Verde","Arábia Saudita","Uruguai"],
+  I:["França","Senegal","Noruega","Iraque"],
+  J:["Argentina","Argélia","Áustria","Jordânia"],
+  K:["Portugal","Uzbequistão","Colômbia","RD Congo"],
+  L:["Inglaterra","Croácia","Gana","Panamá"]
+};
+Object.entries(GROUP_DEF_EARLY).forEach(([g, teams]) => teams.forEach(t => TEAM_GROUP[t] = g));
 
 const GROUP_DEF = {
   A:["México","África do Sul","Coreia do Sul","Rep. Tcheca"],
@@ -747,6 +812,19 @@ function setStatus(type, msg) {
   text.textContent = msg;
 }
 
+// ─── GROUP FILTER STATE ─────────────────────────────────────────────────────
+
+let activeGroup = 'all';
+
+function matchGroup(m) {
+  return TEAM_GROUP[m.home] || TEAM_GROUP[m.away] || null;
+}
+
+function filterByGroup(matches) {
+  if (activeGroup === 'all') return matches;
+  return matches.filter(m => matchGroup(m) === activeGroup);
+}
+
 // ─── FETCH ──────────────────────────────────────────────────────────────────
 
 async function fetchJson(url) {
@@ -833,12 +911,13 @@ function makeMatchCard(m) {
 function renderMatches(matches) {
   if (!matches) return;
 
-  const live     = matches.filter(m => LIVE_ST.has(m.status));
-  const today_ft = matches.filter(m => FIN_ST.has(m.status) && isToday(m.utcDate));
-  const today_ns = matches.filter(m => m.status === 'NS' && isToday(m.utcDate));
+  const filtered = filterByGroup(matches);
+  const live     = filtered.filter(m => LIVE_ST.has(m.status));
+  const today_ft = filtered.filter(m => FIN_ST.has(m.status) && isToday(m.utcDate));
+  const today_ns = filtered.filter(m => m.status === 'NS' && isToday(m.utcDate));
   const today    = [...today_ft, ...today_ns];
-  const recent   = matches.filter(m => FIN_ST.has(m.status) && !isToday(m.utcDate)).slice(-6).reverse();
-  const upcoming = matches.filter(m => m.status === 'NS' && !isToday(m.utcDate)).slice(0, 12);
+  const recent   = filtered.filter(m => FIN_ST.has(m.status) && !isToday(m.utcDate)).slice(-6).reverse();
+  const upcoming = filtered.filter(m => m.status === 'NS' && !isToday(m.utcDate)).slice(0, 12);
 
   // Live tab count
   const liveCount = document.getElementById('tab-live-count');
@@ -1066,6 +1145,17 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('pane-' + tab.dataset.pane).classList.add('active');
+  });
+});
+
+// ─── GROUP FILTER EVENTS ────────────────────────────────────────────────────
+
+document.querySelectorAll('#group-filter .gfbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#group-filter .gfbtn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeGroup = btn.dataset.g;
+    if (cachedMatches) renderMatches(cachedMatches);
   });
 });
 
