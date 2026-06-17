@@ -32,31 +32,32 @@
   header {
     background: linear-gradient(135deg, #0f1f3d 0%, #1a2f55 100%);
     border-bottom: 1px solid var(--border);
-    padding: 16px 20px;
+    padding: 16px 20px 14px;
     display: flex;
-    align-items: center;
-    gap: 16px;
+    flex-direction: column;
+    gap: 10px;
     position: sticky;
     top: 0;
     z-index: 100;
-    flex-wrap: wrap;
   }
-  .brand {
+  .header-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex: 1;
+    justify-content: space-between;
   }
   .brand-icon {
     font-size: 28px;
   }
-  .brand h1 {
+  .brand-title {
+    padding-left: 2px;
+  }
+  .brand-title h1 {
     font-size: 18px;
     font-weight: 700;
     color: #fff;
     letter-spacing: -0.3px;
   }
-  .brand small {
+  .brand-title small {
     font-size: 11px;
     color: var(--faint);
     display: block;
@@ -66,7 +67,6 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    flex-wrap: wrap;
   }
   .status-badge {
     display: flex;
@@ -596,19 +596,19 @@
 <body>
 
 <header>
-  <div class="brand">
+  <div class="header-row">
     <span class="brand-icon">⚽</span>
-    <div>
-      <h1>Copa 2026 · Painel</h1>
-      <small>Resultados ao vivo &amp; Classificação</small>
+    <div class="header-meta">
+      <div class="status-badge loading" id="status-badge">
+        <span class="status-dot"></span>
+        <span id="status-text">Conectando...</span>
+      </div>
+      <button class="refresh-btn" onclick="refresh()">↻ Atualizar</button>
     </div>
   </div>
-  <div class="header-meta">
-    <div class="status-badge loading" id="status-badge">
-      <span class="status-dot"></span>
-      <span id="status-text">Conectando...</span>
-    </div>
-    <button class="refresh-btn" onclick="refresh()">↻ Atualizar</button>
+  <div class="brand-title">
+    <h1>Copa 2026 · Painel</h1>
+    <small>Resultados ao vivo &amp; Classificação</small>
   </div>
 </header>
 
