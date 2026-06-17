@@ -43,13 +43,15 @@
   .header-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
   }
   .brand-icon {
     font-size: 28px;
   }
   .brand-title {
-    padding-left: 2px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
   .brand-title h1 {
     font-size: 18px;
@@ -597,7 +599,6 @@
 
 <header>
   <div class="header-row">
-    <span class="brand-icon">⚽</span>
     <div class="header-meta">
       <div class="status-badge loading" id="status-badge">
         <span class="status-dot"></span>
@@ -607,8 +608,11 @@
     </div>
   </div>
   <div class="brand-title">
-    <h1>Copa 2026 · Painel</h1>
-    <small>Resultados ao vivo &amp; Classificação</small>
+    <span class="brand-icon">⚽</span>
+    <div>
+      <h1>Copa 2026 · Painel</h1>
+      <small>Resultados ao vivo &amp; Classificação</small>
+    </div>
   </div>
 </header>
 
