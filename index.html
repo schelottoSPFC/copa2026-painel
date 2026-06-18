@@ -437,12 +437,17 @@
     gap: 10px;
     padding: 8px 16px;
     border-bottom: 1px solid rgba(30,45,69,.5);
-    cursor: pointer;
     transition: background .15s;
   }
   .leg-row:last-child { border-bottom: none; }
-  .leg-row:hover { background: rgba(255,255,255,.03); }
   .leg-icon { font-size: 16px; width: 20px; flex-shrink: 0; }
+  .leg-chance {
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    width: 38px;
+    text-align: right;
+  }
   .leg-flag { font-size: 18px; }
   .leg-name { flex: 1; font-size: 13px; font-weight: 500; }
   .leg-type-tag {
@@ -834,11 +839,61 @@ function typeLabel(t) {
   return '✅ Classif.';
 }
 
-function getLegState(mk, i) { return localStorage.getItem(`bet-${mk}-${i}`) || 'pending'; }
-function setLegState(mk, i, s) { localStorage.setItem(`bet-${mk}-${i}`, s); }
-
 const ICONS = { pending:'⏳', won:'✅', lost:'❌' };
-const STATES = ['pending','won','lost'];
+
+// ─── LIVE BET OUTCOME ENGINE ────────────────────────────────────────────────
+// Estima estado e chance de cada perna com base na classificação atual,
+// sem precisar de input manual.
+
+function groupRows(letter) {
+  const teams = GROUP_DEF[letter] || [];
+  const rows = (cachedStandings && cachedStandings[letter]) || teams.map(t => ({ team: t, pts: 0, j: 0, sg: 0 }));
+  return [...rows].sort((a, b) => b.pts - a.pts || b.sg - a.sg);
+}
+
+function allGroupsComplete() {
+  if (!cachedStandings) return false;
+  return Object.keys(GROUP_DEF).every(letter => {
+    const rows = cachedStandings[letter];
+    return rows && rows.length && rows.every(r => r.j >= 3);
+  });
+}
+
+function bestThirdPlacedTeams() {
+  const thirds = Object.keys(GROUP_DEF).map(letter => groupRows(letter)[2]).filter(Boolean);
+  const sorted = [...thirds].sort((a, b) => b.pts - a.pts || b.sg - a.sg);
+  return new Set(sorted.slice(0, 8).map(r => r.team));
+}
+
+const RANK_CHANCE_WINNER  = { 1: 62, 2: 28, 3: 8,  4: 2  };
+const RANK_CHANCE_QUALIFY = { 1: 82, 2: 60, 3: 32, 4: 8  };
+
+function legOutcome(team, type) {
+  const letter = TEAM_GROUP[team];
+  if (!letter) return { state: 'pending', chance: 50 };
+  const rows = groupRows(letter);
+  const idx = rows.findIndex(r => r.team === team);
+  if (idx === -1) return { state: 'pending', chance: 50 };
+  const rank = idx + 1;
+  const groupDone = rows.every(r => r.j >= 3);
+
+  if (type === 'Vencedor') {
+    if (groupDone) return { state: rank === 1 ? 'won' : 'lost', chance: rank === 1 ? 100 : 0 };
+    return { state: 'pending', chance: RANK_CHANCE_WINNER[rank] ?? 25 };
+  }
+
+  // "Top 2" e "Classificar" representam avançar à próxima fase (top 2 do grupo
+  // ou um dos 8 melhores terceiros, quando todos os grupos já tiverem terminado).
+  if (groupDone) {
+    let qualified = rank <= 2;
+    if (!qualified && rank === 3) {
+      if (!allGroupsComplete()) return { state: 'pending', chance: 35 };
+      qualified = bestThirdPlacedTeams().has(team);
+    }
+    return { state: qualified ? 'won' : 'lost', chance: qualified ? 100 : 0 };
+  }
+  return { state: 'pending', chance: RANK_CHANCE_QUALIFY[rank] ?? 30 };
+}
 
 // ─── STATUS UI ──────────────────────────────────────────────────────────────
 
@@ -1059,24 +1114,30 @@ function renderMultiplas() {
   grid.innerHTML = Object.entries(MULT).map(([mk, m]) => {
     let combo = 1;
     m.legs.forEach(l => combo *= l[2]);
-    const prob = (100 / combo).toFixed(1);
+
+    const outcomes = m.legs.map(([team, type]) => legOutcome(team, type));
 
     const legsHtml = m.legs.map((leg, i) => {
       const [team, type, odd] = leg;
-      const st = getLegState(mk, i);
+      const { state, chance } = outcomes[i];
+      const chanceColor = state === 'won' ? 'var(--green)' : state === 'lost' ? 'var(--red)' : 'var(--faint)';
       return `
-        <div class="leg-row ${st}" data-mk="${mk}" data-li="${i}" onclick="toggleLeg(this)">
-          <span class="leg-icon">${ICONS[st]}</span>
+        <div class="leg-row ${state}">
+          <span class="leg-icon">${ICONS[state]}</span>
           <span class="leg-flag">${flag(team)}</span>
           <span class="leg-name">${team}</span>
           <span class="leg-type-tag ${typeClass(type)}">${typeLabel(type)}</span>
+          <span class="leg-chance" style="color:${chanceColor}">${chance}%</span>
           <span class="leg-odd">${odd.toFixed(2)}</span>
         </div>`;
     }).join('');
 
-    const won  = m.legs.filter((_,i) => getLegState(mk,i) === 'won').length;
-    const lost = m.legs.filter((_,i) => getLegState(mk,i) === 'lost').length;
+    const won  = outcomes.filter(o => o.state === 'won').length;
+    const lost = outcomes.filter(o => o.state === 'lost').length;
     const pend = m.legs.length - won - lost;
+
+    // chance atual da múltipla = produto da chance de cada perna ainda viva
+    const liveChance = lost > 0 ? 0 : outcomes.reduce((acc, o) => acc * (o.chance / 100), 1) * 100;
 
     return `
       <div class="mult-card" id="mult-${mk}">
@@ -1095,40 +1156,14 @@ function renderMultiplas() {
             ${lost ? `<div class="mult-stat"><strong style="color:var(--red)">${lost}</strong>Perdidas</div>` : ''}
           </div>
           <div>
-            <div style="font-size:11px;color:var(--faint);text-align:right;margin-bottom:4px">${prob}% prob.</div>
-            <div class="prob-bar"><div class="prob-fill" style="width:${prob}%"></div></div>
+            <div style="font-size:11px;color:var(--faint);text-align:right;margin-bottom:4px">${liveChance.toFixed(1)}% chance atual</div>
+            <div class="prob-bar"><div class="prob-fill" style="width:${liveChance}%"></div></div>
           </div>
         </div>
       </div>`;
   }).join('');
 }
 
-function toggleLeg(el) {
-  const mk = el.dataset.mk, i = +el.dataset.li;
-  const cur = getLegState(mk, i);
-  const next = STATES[(STATES.indexOf(cur) + 1) % 3];
-  setLegState(mk, i, next);
-  el.className = `leg-row ${next}`;
-  el.querySelector('.leg-icon').textContent = ICONS[next];
-  // update footer stats
-  updateMultStats(mk);
-}
-
-function updateMultStats(mk) {
-  const m = MULT[mk];
-  const card = document.getElementById('mult-' + mk);
-  if (!card) return;
-  const won  = m.legs.filter((_,i) => getLegState(mk,i) === 'won').length;
-  const lost = m.legs.filter((_,i) => getLegState(mk,i) === 'lost').length;
-  const pend = m.legs.length - won - lost;
-  const statsEl = card.querySelector('.mult-stats');
-  if (statsEl) {
-    statsEl.innerHTML = `
-      <div class="mult-stat"><strong style="color:var(--green)">${won}</strong>Confirmadas</div>
-      <div class="mult-stat"><strong>${pend}</strong>Pendentes</div>
-      ${lost ? `<div class="mult-stat"><strong style="color:var(--red)">${lost}</strong>Perdidas</div>` : ''}`;
-  }
-}
 
 // ─── MAIN REFRESH ────────────────────────────────────────────────────────────
 
@@ -1154,6 +1189,8 @@ async function refresh() {
       cachedStandings = sData.standings;
       renderStandings(cachedStandings);
     }
+
+    renderMultiplas();
 
     const updated = mData.updated || sData.updated;
     const t = new Date(updated).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
