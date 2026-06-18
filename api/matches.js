@@ -6,14 +6,18 @@ export default async function handler(req, res) {
   });
   const data = await r.json();
 
-  const matches = (data.matches || []).map(m => ({
-    home: teamName(m.homeTeam),
-    away: teamName(m.awayTeam),
-    status: mapStatus(m.status),
-    utcDate: m.utcDate,
-    score_home: m.score?.fullTime?.home ?? null,
-    score_away: m.score?.fullTime?.away ?? null
-  }));
+  const matches = (data.matches || []).map(m => {
+    const status = mapStatus(m.status);
+    const isOngoing = status !== 'NS';
+    return {
+      home: teamName(m.homeTeam),
+      away: teamName(m.awayTeam),
+      status,
+      utcDate: m.utcDate,
+      score_home: m.score?.fullTime?.home ?? (isOngoing ? 0 : null),
+      score_away: m.score?.fullTime?.away ?? (isOngoing ? 0 : null)
+    };
+  });
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
