@@ -413,17 +413,15 @@
   .bracket-note strong { color: var(--text); }
   .bracket-tree {
     display: flex;
-    gap: 20px;
-    overflow-x: auto;
+    flex-direction: column;
+    gap: 16px;
     padding: 4px 4px 14px;
-    -webkit-overflow-scrolling: touch;
   }
   .bracket-pair {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    min-width: 230px;
-    flex-shrink: 0;
+    max-width: 420px;
     position: relative;
     padding-right: 16px;
   }
@@ -695,7 +693,7 @@
     .match-score { font-size: 18px; }
     .groups-grid { grid-template-columns: 1fr; }
     .mult-grid { grid-template-columns: 1fr; }
-    .bracket-pair { min-width: 200px; }
+    .bracket-pair { max-width: none; }
     header { padding: 12px; }
     .tab { font-size: 11px; padding: 10px 4px; }
   }
