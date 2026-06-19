@@ -411,12 +411,44 @@
     margin-bottom: 16px;
   }
   .bracket-note strong { color: var(--text); }
-  .bracket-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 10px;
-    margin-bottom: 24px;
+  .bracket-tree {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding: 4px 4px 14px;
+    -webkit-overflow-scrolling: touch;
   }
+  .bracket-pair {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 230px;
+    flex-shrink: 0;
+    position: relative;
+    padding-right: 16px;
+  }
+  .bracket-pair::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 25%;
+    bottom: 25%;
+    width: 10px;
+    border: 2px solid var(--border);
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+  }
+  .bracket-r16 {
+    margin-top: 2px;
+    padding: 8px 10px;
+    background: var(--card2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    font-size: 11px;
+    color: var(--faint);
+    text-align: center;
+  }
+  .bracket-r16 strong { color: var(--text); font-weight: 700; }
   .bmatch {
     background: var(--card);
     border: 1px solid var(--border);
@@ -663,7 +695,7 @@
     .match-score { font-size: 18px; }
     .groups-grid { grid-template-columns: 1fr; }
     .mult-grid { grid-template-columns: 1fr; }
-    .bracket-grid { grid-template-columns: 1fr; }
+    .bracket-pair { min-width: 200px; }
     header { padding: 12px; }
     .tab { font-size: 11px; padding: 10px 4px; }
   }
@@ -760,6 +792,14 @@
     <div class="groups-grid" id="groups-grid">
       <div class="empty"><span class="empty-icon">⏳</span>Carregando classificação...</div>
     </div>
+
+    <div class="section-title">📊 Corrida pelos 8 Melhores Terceiros</div>
+    <div class="thirds-table-wrap">
+      <table class="group-table thirds-table" id="thirds-table">
+        <thead><tr><th>#</th><th>Seleção</th><th>Grupo</th><th>P</th><th>J</th><th>SG</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- ── MÚLTIPLAS ── -->
@@ -775,19 +815,11 @@
       Os confrontos entre 1º e 2º colocados são fixos pelo chaveamento oficial da FIFA.
       Já os confrontos contra 3º colocados dependem de qual combinação de grupos produz
       os 8 melhores terceiros — isso só é confirmado oficialmente após o fim da fase de
-      grupos (27/06). Até lá, mostramos o <strong>favorito atual</strong> com base na
-      classificação em tempo real.
+      grupos (27/06). Até lá, mostramos o <strong>3º colocado favorito</strong> com base
+      na classificação em tempo real.
     </div>
-    <div class="bracket-grid" id="bracket-grid">
+    <div class="bracket-tree" id="bracket-grid">
       <div class="empty"><span class="empty-icon">⏳</span>Carregando chaveamento...</div>
-    </div>
-
-    <div class="section-title">📊 Corrida pelos 8 Melhores Terceiros</div>
-    <div class="thirds-table-wrap">
-      <table class="group-table thirds-table" id="thirds-table">
-        <thead><tr><th>#</th><th>Seleção</th><th>Grupo</th><th>P</th><th>J</th><th>SG</th><th>Status</th></tr></thead>
-        <tbody></tbody>
-      </table>
     </div>
   </div>
 
@@ -1012,6 +1044,13 @@ const R32_BRACKET = [
   { m: 88, home: { group: 'D', pos: 2 }, away: { group: 'G', pos: 2 } }
 ];
 
+// Pares de jogos das oitavas (Round of 32) cujos vencedores se enfrentam
+// nas oitavas de final propriamente ditas (Round of 16).
+const R16_PAIRS = [
+  [73, 75], [74, 77], [76, 78], [79, 80],
+  [83, 84], [81, 82], [86, 88], [85, 87]
+];
+
 function rankedThirds() {
   return Object.keys(GROUP_DEF)
     .map(letter => ({ letter, row: groupRows(letter)[2] }))
@@ -1057,13 +1096,15 @@ function renderBracket() {
   const grid = document.getElementById('bracket-grid');
   if (!grid) return;
   const thirdAssignment = assignThirdSlots();
+  const byMatch = Object.fromEntries(R32_BRACKET.map(b => [b.m, b]));
   const resolveSlot = (slot, m) => {
     if (slot.group) return resolveGroupSlot(slot);
     const team = thirdAssignment[m];
     const label = `Melhor 3º (${slot.third.join('/')})`;
     return { team: team ? team.team : null, fixed: false, confirmed: false, label };
   };
-  grid.innerHTML = R32_BRACKET.map(({ m, home, away }) => {
+  const matchHtml = (m) => {
+    const { home, away } = byMatch[m];
     const h = resolveSlot(home, m);
     const a = resolveSlot(away, m);
     const row = (slot) => `
@@ -1078,22 +1119,30 @@ function renderBracket() {
         ${row(h)}
         ${row(a)}
       </div>`;
-  }).join('');
+  };
 
+  grid.innerHTML = R16_PAIRS.map(([m1, m2]) => `
+    <div class="bracket-pair">
+      ${matchHtml(m1)}
+      ${matchHtml(m2)}
+      <div class="bracket-r16">Oitavas: <strong>Vencedor ${m1}</strong> x <strong>Vencedor ${m2}</strong></div>
+    </div>`).join('');
+}
+
+function renderThirdsRace() {
   const tbody = document.querySelector('#thirds-table tbody');
-  if (tbody) {
-    const thirds = rankedThirds();
-    tbody.innerHTML = thirds.map((r, idx) => `
-      <tr class="${idx < 8 ? 'in-zone' : ''}">
-        <td>${idx + 1}</td>
-        <td><span class="flag">${flag(r.team)}</span> ${r.team}</td>
-        <td>${r.letter}</td>
-        <td class="pts-cell">${r.pts}</td>
-        <td>${r.j}</td>
-        <td>${r.sg > 0 ? '+' : ''}${r.sg}</td>
-        <td style="color:${idx < 8 ? 'var(--green)' : 'var(--faint)'}">${idx < 8 ? 'Classificado' : 'Fora'}</td>
-      </tr>`).join('');
-  }
+  if (!tbody) return;
+  const thirds = rankedThirds();
+  tbody.innerHTML = thirds.map((r, idx) => `
+    <tr class="${idx < 8 ? 'in-zone' : ''}">
+      <td>${idx + 1}</td>
+      <td><span class="flag">${flag(r.team)}</span> ${r.team}</td>
+      <td>${r.letter}</td>
+      <td class="pts-cell">${r.pts}</td>
+      <td>${r.j}</td>
+      <td>${r.sg > 0 ? '+' : ''}${r.sg}</td>
+      <td style="color:${idx < 8 ? 'var(--green)' : 'var(--faint)'}">${idx < 8 ? 'Classificado' : 'Fora'}</td>
+    </tr>`).join('');
 }
 
 // ─── STATUS UI ──────────────────────────────────────────────────────────────
@@ -1389,6 +1438,7 @@ async function refresh() {
     if (sData.standings) {
       cachedStandings = sData.standings;
       renderStandings(cachedStandings);
+      renderThirdsRace();
     }
 
     renderMultiplas();
@@ -1439,6 +1489,7 @@ document.querySelectorAll('#group-filter .gfbtn').forEach(btn => {
 
 renderMultiplas();
 renderBracket();
+renderThirdsRace();
 refresh();
 </script>
 </body>
