@@ -1020,27 +1020,52 @@ function rankedThirds() {
     .sort((a, b) => b.pts - a.pts || b.sg - a.sg);
 }
 
-function resolveSlot(slot) {
-  if (slot.group) {
-    const rows = groupRows(slot.group);
-    const groupDone = rows.every(r => r.j >= 3);
-    const row = rows[slot.pos - 1];
-    const label = slot.pos === 1 ? `1º Grupo ${slot.group}` : `2º Grupo ${slot.group}`;
-    return { team: row ? row.team : null, fixed: true, confirmed: groupDone, label };
-  }
-  // slot de 3º colocado: favorito atual entre os grupos candidatos
-  const candidates = rankedThirds().filter(r => slot.third.includes(r.letter));
-  const top = candidates[0] || null;
-  const label = `Melhor 3º (${slot.third.join('/')})`;
-  return { team: top ? top.team : null, fixed: false, confirmed: false, label };
+function resolveGroupSlot(slot) {
+  const rows = groupRows(slot.group);
+  const groupDone = rows.every(r => r.j >= 3);
+  const row = rows[slot.pos - 1];
+  const label = slot.pos === 1 ? `1º Grupo ${slot.group}` : `2º Grupo ${slot.group}`;
+  return { team: row ? row.team : null, fixed: true, confirmed: groupDone, label };
+}
+
+// Cada 3º colocado só pode ocupar UM confronto. Atribuímos os melhores
+// terceiros primeiro, sempre para o slot mais restrito (com menos grupos
+// candidatos ainda livres) entre os que ele é elegível — evita repetir o
+// mesmo time em vários jogos.
+function assignThirdSlots() {
+  const slots = R32_BRACKET.filter(b => b.away.third).map(b => ({ m: b.m, candidates: b.away.third }));
+  const ranked = rankedThirds();
+  const claimedGroups = new Set();
+  const assignment = {};
+
+  ranked.forEach(team => {
+    if (claimedGroups.has(team.letter)) return;
+    const eligible = slots.filter(s => !assignment[s.m] && s.candidates.includes(team.letter));
+    if (!eligible.length) return;
+    eligible.sort((x, y) =>
+      x.candidates.filter(g => !claimedGroups.has(g)).length -
+      y.candidates.filter(g => !claimedGroups.has(g)).length
+    );
+    assignment[eligible[0].m] = team;
+    claimedGroups.add(team.letter);
+  });
+
+  return assignment;
 }
 
 function renderBracket() {
   const grid = document.getElementById('bracket-grid');
   if (!grid) return;
+  const thirdAssignment = assignThirdSlots();
+  const resolveSlot = (slot, m) => {
+    if (slot.group) return resolveGroupSlot(slot);
+    const team = thirdAssignment[m];
+    const label = `Melhor 3º (${slot.third.join('/')})`;
+    return { team: team ? team.team : null, fixed: false, confirmed: false, label };
+  };
   grid.innerHTML = R32_BRACKET.map(({ m, home, away }) => {
-    const h = resolveSlot(home);
-    const a = resolveSlot(away);
+    const h = resolveSlot(home, m);
+    const a = resolveSlot(away, m);
     const row = (slot) => `
       <div class="bmatch-row">
         <span class="bmatch-flag">${slot.team ? flag(slot.team) : '🏳️'}</span>
