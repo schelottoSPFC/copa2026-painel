@@ -488,9 +488,10 @@
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    overflow: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  .thirds-table { width: 100%; }
+  .thirds-table { width: 100%; min-width: 480px; }
   .thirds-table tbody tr.in-zone td { background: rgba(34,197,94,.06); }
   .thirds-table tbody tr.in-zone .pts-cell { color: var(--green); }
 
@@ -694,6 +695,8 @@
     .groups-grid { grid-template-columns: 1fr; }
     .mult-grid { grid-template-columns: 1fr; }
     .bracket-pair { max-width: none; }
+    .thirds-table { min-width: 0; }
+    .thirds-table th, .thirds-table td { padding: 6px 6px; font-size: 11px; }
     header { padding: 12px; }
     .tab { font-size: 11px; padding: 10px 4px; }
   }
@@ -1139,7 +1142,7 @@ function renderThirdsRace() {
       <td class="pts-cell">${r.pts}</td>
       <td>${r.j}</td>
       <td>${r.sg > 0 ? '+' : ''}${r.sg}</td>
-      <td style="color:${idx < 8 ? 'var(--green)' : 'var(--faint)'}">${idx < 8 ? 'Classificado' : 'Fora'}</td>
+      <td style="color:${idx < 8 ? 'var(--green)' : 'var(--faint)'}">${idx < 8 ? 'Classif.' : 'Fora'}</td>
     </tr>`).join('');
 }
 
