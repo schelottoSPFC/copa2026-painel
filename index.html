@@ -303,6 +303,7 @@
   .bet-tag.venc  { background: rgba(251,191,36,.15); color: var(--gold); }
   .bet-tag.classif { background: rgba(34,197,94,.12); color: var(--green); }
   .bet-tag.top2  { background: rgba(59,130,246,.12); color: var(--blue); }
+  .bet-tag.exact { background: rgba(168,85,247,.12); color: #c084fc; }
 
   /* ── STANDINGS ── */
   .groups-grid {
@@ -555,6 +556,7 @@
   .leg-type-tag.venc    { background: rgba(251,191,36,.15); color: var(--gold); }
   .leg-type-tag.classif { background: rgba(34,197,94,.12); color: var(--green); }
   .leg-type-tag.top2    { background: rgba(59,130,246,.12); color: var(--blue); }
+  .leg-type-tag.exact   { background: rgba(168,85,247,.12); color: #c084fc; }
   .leg-odd {
     font-size: 12px;
     font-weight: 700;
@@ -601,6 +603,7 @@
   }
   .mtag-venc    { background: rgba(251,191,36,.18); color: #fbbf24; }
   .mtag-top2    { background: rgba(59,130,246,.18); color: #60a5fa; }
+  .mtag-exact   { background: rgba(168,85,247,.18); color: #c084fc; }
   .mtag-classif { background: rgba(34,197,94,.18);  color: #4ade80; }
 
   /* ── GROUP FILTER BAR ── */
@@ -908,13 +911,35 @@ const MULT = {
       ["Bélgica","Vencedor",1.35], ["Espanha","Vencedor",1.22], ["França","Vencedor",1.40],
       ["Argentina","Vencedor",1.35], ["Portugal","Vencedor",1.45], ["Inglaterra","Vencedor",1.30]
     ]
+  },
+  M4: {
+    label: "Múltipla 4",
+    legs: [
+      { exact: [{ team: "México", pos: 1 }, { team: "Coreia do Sul", pos: 2 }], odd: 1.17 },
+      { exact: [{ team: "Canadá", pos: 1 }, { team: "Catar", pos: 4 }], odd: 1.78 },
+      { exact: [{ team: "Países Baixos", pos: 1 }, { team: "Japão", pos: 2 }], odd: 1.80 },
+      { exact: [{ team: "Egito", pos: 1 }, { team: "Bélgica", pos: 2 }], odd: 1.80 },
+      { exact: [{ team: "Espanha", pos: 1 }, { team: "Cabo Verde", pos: 2 }], odd: 1.80 },
+      { exact: [{ team: "França", pos: 1 }, { team: "Noruega", pos: 2 }], odd: 1.82 },
+      { exact: [{ team: "Argentina", pos: 1 }, { team: "Áustria", pos: 2 }], odd: 1.72 },
+      { exact: [{ team: "Colômbia", pos: 1 }, { team: "Portugal", pos: 2 }], odd: 2.30 },
+      ["Croácia","Classificar",1.24]
+    ]
   }
 };
 
 // Bets map: team -> list of {type, odd, mult}
 const BETS_MAP = {};
 Object.entries(MULT).forEach(([mk, m]) => {
-  m.legs.forEach(([team, type, odd]) => {
+  m.legs.forEach(leg => {
+    if (leg.exact) {
+      leg.exact.forEach(({ team, pos }) => {
+        if (!BETS_MAP[team]) BETS_MAP[team] = [];
+        BETS_MAP[team].push({ type: `${pos}º Lugar`, odd: leg.odd, mult: mk });
+      });
+      return;
+    }
+    const [team, type, odd] = leg;
     if (!BETS_MAP[team]) BETS_MAP[team] = [];
     BETS_MAP[team].push({ type, odd, mult: mk });
   });
@@ -957,11 +982,13 @@ function isToday(isoDate) {
 function typeClass(t) {
   if (t === 'Vencedor') return 'venc';
   if (t === 'Top 2')    return 'top2';
+  if (t.endsWith('º Lugar')) return 'exact';
   return 'classif';
 }
 function typeLabel(t) {
   if (t === 'Vencedor') return '🥇 Vencer';
   if (t === 'Top 2')    return '🥈 Top 2';
+  if (t.endsWith('º Lugar')) return `🎯 ${t}`;
   return '✅ Classif.';
 }
 
@@ -1019,6 +1046,28 @@ function legOutcome(team, type) {
     return { state: qualified ? 'won' : 'lost', chance: qualified ? 100 : 0 };
   }
   return { state: 'pending', chance: RANK_CHANCE_QUALIFY[rank] ?? 30 };
+}
+
+// Aposta de "posição exata": só vence se TODOS os times terminarem
+// exatamente nas posições combinadas do mesmo grupo.
+const EXACT_POS_CHANCE = { 1: 50, 2: 40, 3: 25, 4: 15 };
+
+function exactOutcome(conds) {
+  const letter = TEAM_GROUP[conds[0].team];
+  if (!letter) return { state: 'pending', chance: 20 };
+  const rows = groupRows(letter);
+  const groupDone = rows.every(r => r.j >= 3);
+
+  const isAtPos = (c) => rows.findIndex(r => r.team === c.team) === c.pos - 1;
+  const allMatch = conds.every(isAtPos);
+
+  if (groupDone) return { state: allMatch ? 'won' : 'lost', chance: allMatch ? 100 : 0 };
+
+  const chance = conds.reduce((acc, c) => {
+    const factor = isAtPos(c) ? (EXACT_POS_CHANCE[c.pos] ?? 20) : 6;
+    return acc * (factor / 100);
+  }, 1) * 100;
+  return { state: 'pending', chance: Math.round(chance * 10) / 10 };
 }
 
 // ─── MATA-MATA (ROUND OF 32) ────────────────────────────────────────────────
@@ -1364,14 +1413,29 @@ function renderMultiplas() {
   const grid = document.getElementById('mult-grid');
   grid.innerHTML = Object.entries(MULT).map(([mk, m]) => {
     let combo = 1;
-    m.legs.forEach(l => combo *= l[2]);
+    m.legs.forEach(l => combo *= (l.exact ? l.odd : l[2]));
 
-    const outcomes = m.legs.map(([team, type]) => legOutcome(team, type));
+    const outcomes = m.legs.map(leg => leg.exact ? exactOutcome(leg.exact) : legOutcome(leg[0], leg[1]));
 
     const legsHtml = m.legs.map((leg, i) => {
-      const [team, type, odd] = leg;
       const { state, chance } = outcomes[i];
       const chanceColor = state === 'won' ? 'var(--green)' : state === 'lost' ? 'var(--red)' : 'var(--faint)';
+
+      if (leg.exact) {
+        const names = leg.exact.map(c => `${c.pos}º ${c.team}`).join(' + ');
+        const flags = leg.exact.map(c => flag(c.team)).join(' ');
+        return `
+          <div class="leg-row ${state}">
+            <span class="leg-icon">${ICONS[state]}</span>
+            <span class="leg-flag">${flags}</span>
+            <span class="leg-name">${names}</span>
+            <span class="leg-type-tag exact">🎯 Posição Exata</span>
+            <span class="leg-chance" style="color:${chanceColor}">${chance}%</span>
+            <span class="leg-odd">${leg.odd.toFixed(2)}</span>
+          </div>`;
+      }
+
+      const [team, type, odd] = leg;
       return `
         <div class="leg-row ${state}">
           <span class="leg-icon">${ICONS[state]}</span>
