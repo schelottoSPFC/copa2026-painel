@@ -567,10 +567,11 @@
   }
   .leg-row.won .leg-name { color: var(--green); }
   .leg-row.lost .leg-name { color: var(--red); text-decoration: line-through; opacity: .7; }
-  .leg-row.exact-row { align-items: flex-start; flex-wrap: wrap; }
-  .leg-exact-body { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 140px; }
+  .leg-row.exact-row { align-items: flex-start; }
+  .leg-exact-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
   .leg-exact-item { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
-  .leg-exact-item .leg-flag { font-size: 16px; }
+  .leg-exact-item .leg-flag { font-size: 16px; flex-shrink: 0; }
+  .leg-exact-item span:last-child { overflow-wrap: break-word; }
   .leg-row.exact-row.won .leg-exact-item { color: var(--green); }
   .leg-row.exact-row.lost .leg-exact-item { color: var(--red); text-decoration: line-through; opacity: .7; }
   .leg-exact-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding-top: 2px; }
