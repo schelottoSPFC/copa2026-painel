@@ -567,6 +567,13 @@
   }
   .leg-row.won .leg-name { color: var(--green); }
   .leg-row.lost .leg-name { color: var(--red); text-decoration: line-through; opacity: .7; }
+  .leg-row.exact-row { align-items: flex-start; flex-wrap: wrap; }
+  .leg-exact-body { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 140px; }
+  .leg-exact-item { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+  .leg-exact-item .leg-flag { font-size: 16px; }
+  .leg-row.exact-row.won .leg-exact-item { color: var(--green); }
+  .leg-row.exact-row.lost .leg-exact-item { color: var(--red); text-decoration: line-through; opacity: .7; }
+  .leg-exact-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding-top: 2px; }
   .mult-footer {
     padding: 12px 16px;
     background: var(--card2);
@@ -1422,16 +1429,20 @@ function renderMultiplas() {
       const chanceColor = state === 'won' ? 'var(--green)' : state === 'lost' ? 'var(--red)' : 'var(--faint)';
 
       if (leg.exact) {
-        const names = leg.exact.map(c => `${c.pos}º ${c.team}`).join(' + ');
-        const flags = leg.exact.map(c => flag(c.team)).join(' ');
+        const itemsHtml = leg.exact.map(c => `
+            <div class="leg-exact-item">
+              <span class="leg-flag">${flag(c.team)}</span>
+              <span>${c.pos}º ${c.team}</span>
+            </div>`).join('');
         return `
-          <div class="leg-row ${state}">
+          <div class="leg-row exact-row ${state}">
             <span class="leg-icon">${ICONS[state]}</span>
-            <span class="leg-flag">${flags}</span>
-            <span class="leg-name">${names}</span>
-            <span class="leg-type-tag exact">🎯 Posição Exata</span>
-            <span class="leg-chance" style="color:${chanceColor}">${chance}%</span>
-            <span class="leg-odd">${leg.odd.toFixed(2)}</span>
+            <div class="leg-exact-body">${itemsHtml}</div>
+            <div class="leg-exact-meta">
+              <span class="leg-type-tag exact">🎯 Posição Exata</span>
+              <span class="leg-chance" style="color:${chanceColor}">${chance}%</span>
+              <span class="leg-odd">${leg.odd.toFixed(2)}</span>
+            </div>
           </div>`;
       }
 
