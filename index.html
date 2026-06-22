@@ -1282,8 +1282,8 @@ function makeMatchCard(m) {
   let betFooter = '';
   if (hasBets) {
     const tags = [
-      ...homeBets.map(b => `<span class="bet-tag ${typeClass(b.type)}">${flag(m.home)} ${m.home} ${b.type} · ${b.mult}</span>`),
-      ...awayBets.map(b => `<span class="bet-tag ${typeClass(b.type)}">${flag(m.away)} ${m.away} ${b.type} · ${b.mult}</span>`)
+      ...homeBets.map(b => `<span class="bet-tag ${typeClass(b.type)}">${flag(m.home)} ${b.type} · ${b.mult}</span>`),
+      ...awayBets.map(b => `<span class="bet-tag ${typeClass(b.type)}">${flag(m.away)} ${b.type} · ${b.mult}</span>`)
     ].join('');
     betFooter = `<div class="match-card-footer">${tags}</div>`;
   }
